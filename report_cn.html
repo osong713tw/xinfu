@@ -159,6 +159,44 @@
             .analytics-chart-box { height: 260px; }
             .analytics-chart-box.tall { height: 320px; }
         }
+
+        /* ── Diagnosis section ── */
+        .diagnosis-section { padding: 30px 40px; background: #fafbfc; border-bottom: 3px solid #ecf0f1; }
+        .diagnosis-section > h2 { font-size: 1.3em; color: #2c3e50; margin-bottom: 8px; padding-bottom: 10px; border-bottom: 2px solid #e74c3c; display: flex; align-items: center; gap: 10px; }
+        .diagnosis-section > .diag-subtitle { font-size: 0.85em; color: #7f8c8d; margin-bottom: 28px; }
+        .diag-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        .diag-card { background: white; border-radius: 12px; padding: 20px; box-shadow: 0 2px 12px rgba(0,0,0,0.07); border-top: 4px solid #e74c3c; }
+        .diag-card.warn { border-top-color: #f39c12; }
+        .diag-card.info { border-top-color: #3498db; }
+        .diag-card.tip  { border-top-color: #27ae60; }
+        .diag-card-header { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 14px; }
+        .diag-card-icon { font-size: 1.8em; line-height: 1; }
+        .diag-card-title { font-size: 1em; font-weight: 800; color: #2c3e50; margin-bottom: 3px; }
+        .diag-card-label { font-size: 0.72em; font-weight: 700; padding: 2px 8px; border-radius: 20px; display: inline-block; }
+        .label-danger { background: #fde8e8; color: #c0392b; }
+        .label-warn   { background: #fef3cd; color: #856404; }
+        .label-info   { background: #d6eaf8; color: #1a5276; }
+        .label-tip    { background: #d5f5e3; color: #1e8449; }
+        .diag-body { font-size: 0.83em; color: #555; line-height: 1.7; }
+        .diag-body strong { color: #2c3e50; }
+        .diag-highlight { background: #fff8e1; border-left: 3px solid #f39c12; padding: 8px 12px; border-radius: 4px; margin: 10px 0; font-size: 0.82em; color: #5d4037; }
+        .diag-highlight.red { background: #fdecea; border-left-color: #e74c3c; color: #922b21; }
+        .diag-highlight.green { background: #e9f7ef; border-left-color: #27ae60; color: #1e8449; }
+        .diag-table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 0.8em; }
+        .diag-table th { background: #f0f3f4; padding: 6px 8px; text-align: left; color: #555; font-weight: 700; }
+        .diag-table td { padding: 6px 8px; border-bottom: 1px solid #f0f3f4; color: #444; }
+        .diag-table tr:last-child td { border-bottom: none; }
+        .diag-reco { margin-top: 20px; background: white; border-radius: 12px; padding: 20px; box-shadow: 0 2px 12px rgba(0,0,0,0.07); border-top: 4px solid #27ae60; }
+        .diag-reco h3 { font-size: 1em; font-weight: 800; color: #2c3e50; margin-bottom: 16px; }
+        .diag-reco-list { display: flex; flex-direction: column; gap: 10px; }
+        .diag-reco-item { display: flex; gap: 12px; align-items: flex-start; background: #f8f9fa; border-radius: 8px; padding: 12px 14px; }
+        .diag-reco-num { background: #27ae60; color: white; font-size: 0.75em; font-weight: 800; width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 1px; }
+        .diag-reco-text { font-size: 0.83em; color: #444; line-height: 1.6; }
+        .diag-reco-text strong { color: #2c3e50; }
+        @media (max-width: 700px) {
+            .diagnosis-section { padding: 20px 15px; }
+            .diag-grid { grid-template-columns: 1fr; }
+        }
     </style>
 </head>
 <body>
@@ -169,6 +207,7 @@
         </div>
         <div class="grand-total-banner" id="grand-total"></div>
         <div class="analytics-section" id="analytics"></div>
+        <div class="diagnosis-section" id="diagnosis"></div>
         <div class="summary-section" id="summary"></div>
         <div class="content" id="content"></div>
         <div class="footer">
@@ -513,6 +552,220 @@ function renderAnalytics() {
     });
 }
 
+function renderDiagnosis() {
+    // Compute per-product stats for diagnosis
+    const products = Object.entries(DATA).map(([code, [name, data]]) => {
+        const totalQty = data.reduce((s,[,q])=>s+q, 0);
+        const totalAmt = data.reduce((s,[,,a])=>s+a, 0);
+        const avgPrice = totalAmt / totalQty;
+        const prices   = data.map(([,q,a])=>a/q);
+        const maxP     = Math.max(...prices);
+        const minP     = Math.min(...prices);
+        const vol      = prices.length > 1 ? (maxP-minP)/avgPrice*100 : 0;
+        return { code, name, totalQty, totalAmt, avgPrice, maxP, minP, vol, months: data.length, data };
+    });
+
+    const totalAmt = products.reduce((s,p)=>s+p.totalAmt, 0);
+    const byAmt    = [...products].sort((a,b)=>b.totalAmt-a.totalAmt);
+    const top5Pct  = (byAmt.slice(0,5).reduce((s,p)=>s+p.totalAmt,0)/totalAmt*100).toFixed(1);
+
+    // Monthly totals
+    const monthlyAmt = new Array(12).fill(0);
+    for (const [,[,data]] of Object.entries(DATA)) for (const [m,,a] of data) monthlyAmt[m-1]+=a;
+    const maxMonth = monthlyAmt.indexOf(Math.max(...monthlyAmt.filter(x=>x>0)))+1;
+    const minMonth = monthlyAmt.indexOf(Math.min(...monthlyAmt.filter(x=>x>0)))+1;
+    const peakAmt  = monthlyAmt[maxMonth-1];
+    const lowAmt   = monthlyAmt[minMonth-1];
+    const cashFlowRatio = (peakAmt/lowAmt).toFixed(1);
+
+    // Abnormal/weak products
+    const weakProds = products.filter(p=>p.months<=3&&p.totalAmt<5000000);
+    const highVol   = [...products].filter(p=>p.months>1).sort((a,b)=>b.vol-a.vol).slice(0,3);
+
+    // Top 5 concentration table
+    const top5Html = byAmt.slice(0,5).map((p,i) => {
+        const pct = (p.totalAmt/totalAmt*100).toFixed(1);
+        const bar = Math.round(pct*1.5);
+        return `<tr>
+            <td>${['🥇','🥈','🥉','4️⃣','5️⃣'][i]} ${p.name.split(' ').slice(-1)[0]}</td>
+            <td style="color:#e67e22;font-weight:700">${formatChinese(Math.round(p.totalAmt))}</td>
+            <td><div style="display:flex;align-items:center;gap:6px">
+                <div style="width:${bar}px;height:8px;background:#e67e22;border-radius:4px;min-width:4px"></div>
+                <span style="color:#e74c3c;font-weight:700">${pct}%</span>
+            </div></td>
+        </tr>`;
+    }).join('');
+
+    // Volatility table
+    const volHtml = highVol.map(p => `<tr>
+        <td>${p.name.split(' ').slice(-1)[0]}</td>
+        <td style="color:#3498db">${p.minP.toFixed(0)}</td>
+        <td style="color:#e74c3c">${p.maxP.toFixed(0)}</td>
+        <td style="color:#8e44ad;font-weight:700">${p.vol.toFixed(0)}%</td>
+    </tr>`).join('');
+
+    // Weak/abnormal products list
+    const weakHtml = weakProds.map(p =>
+        `<div class="diag-highlight red">⚠️ <strong>${p.name}</strong>：僅 ${p.months} 個月，總金額 ${formatChinese(Math.round(p.totalAmt))} LAK</div>`
+    ).join('');
+
+    // Iceberg & Red Coral anomaly
+    const icebergData = DATA['V0009'][1];
+    const missing789  = [7,8,9,10,11].filter(m => !icebergData.find(([mo])=>mo===m));
+
+    document.getElementById('diagnosis').innerHTML = `
+    <h2>🔍 經營問題診斷</h2>
+    <p class="diag-subtitle">根據 2025 年度數據自動分析，以下為需要老闆重點關注的問題與建議</p>
+
+    <div class="diag-grid">
+
+      <!-- Problem 1: Revenue concentration -->
+      <div class="diag-card">
+        <div class="diag-card-header">
+          <span class="diag-card-icon">⚡</span>
+          <div>
+            <div class="diag-card-title">問題一：收入過度集中，風險極高</div>
+            <span class="diag-card-label label-danger">🚨 嚴重警示</span>
+          </div>
+        </div>
+        <div class="diag-body">
+          前 5 名品項佔全年總收入 <strong style="color:#e74c3c;font-size:1.1em">${top5Pct}%</strong>，其餘 17 種品項合計不到 ${(100-parseFloat(top5Pct)).toFixed(1)}%。
+          一旦主力品項出現天氣、病蟲害或客戶流失，整體收入將大幅崩潰。
+          <table class="diag-table" style="margin-top:12px">
+            <thead><tr><th>品項</th><th>總金額</th><th>佔比</th></tr></thead>
+            <tbody>${top5Html}</tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Problem 2: Cash flow gap -->
+      <div class="diag-card warn">
+        <div class="diag-card-header">
+          <span class="diag-card-icon">📉</span>
+          <div>
+            <div class="diag-card-title">問題二：淡旺季現金流差距懸殊</div>
+            <span class="diag-card-label label-warn">⚠️ 需要關注</span>
+          </div>
+        </div>
+        <div class="diag-body">
+          全年收入最高月份是 <strong>${maxMonth} 月</strong>（${formatChinese(Math.round(peakAmt))} LAK），
+          最低是 <strong>${minMonth} 月</strong>（${formatChinese(Math.round(lowAmt))} LAK）。
+          <div class="diag-highlight red">旺季是淡季的 <strong>${cashFlowRatio} 倍</strong>，代表淡季現金流極度緊張</div>
+          番茄L 最典型：1月產量 19,213 kg，到 11 月剩 <strong>440 kg</strong>，幾乎斷貨。
+          日本青瓜 10月從高峰掉到 1,427 kg，11 月剩 <strong>406 kg</strong>。<br><br>
+          淡季如果沒有足夠品項補位，員工薪資、土地成本照樣支出，利潤就會被侵蝕。
+        </div>
+      </div>
+
+      <!-- Problem 3: Zombie products -->
+      <div class="diag-card warn">
+        <div class="diag-card-header">
+          <span class="diag-card-icon">🪦</span>
+          <div>
+            <div class="diag-card-title">問題三：有品項幾乎在浪費資源</div>
+            <span class="diag-card-label label-warn">⚠️ 需要關注</span>
+          </div>
+        </div>
+        <div class="diag-body">
+          以下品項銷售月份極少、金額極低，占用土地與人力卻幾乎沒有貢獻：
+          ${weakHtml}
+          <div class="diag-highlight">
+            紅珊瑚生菜 1月有 877 kg，2月突然剩 <strong>5 kg</strong>，4月只有 <strong>3 kg</strong>。
+            這不像正常收成，疑似客戶流失或市場無人要。
+          </div>
+          這些品項占用的土地若改種主力商品，理論上可直接增加收入。
+        </div>
+      </div>
+
+      <!-- Problem 4: Price volatility -->
+      <div class="diag-card">
+        <div class="diag-card-header">
+          <span class="diag-card-icon">🎢</span>
+          <div>
+            <div class="diag-card-title">問題四：單價波動異常，定價管理有問題</div>
+            <span class="diag-card-label label-danger">🚨 嚴重警示</span>
+          </div>
+        </div>
+        <div class="diag-body">
+          以下品項單價波動幅度遠超正常市場行情：
+          <table class="diag-table" style="margin-top:10px">
+            <thead><tr><th>品項</th><th>最低單價</th><th>最高單價</th><th>波動幅度</th></tr></thead>
+            <tbody>${volHtml}</tbody>
+          </table>
+          <div class="diag-highlight red">
+            芹菜最低 4,289、最高 38,942 LAK/kg，波動幅度超過 <strong>800%</strong>，屬於嚴重異常
+          </div>
+          可能原因：不同客戶售價不統一、淡季定價失控、或有品項是在虧本出清。
+        </div>
+      </div>
+
+      <!-- Problem 5: Mysterious disappearances -->
+      <div class="diag-card info">
+        <div class="diag-card-header">
+          <span class="diag-card-icon">❓</span>
+          <div>
+            <div class="diag-card-title">問題五：部分品項中途消失，原因不明</div>
+            <span class="diag-card-label label-info">📌 需要追查</span>
+          </div>
+        </div>
+        <div class="diag-body">
+          <strong>冰山生菜（V0009）</strong>：1–6 月正常銷售，<strong>7–11 月完全空白</strong>，12 月才突然出現 2,791 kg。
+          <div class="diag-highlight">這不像季節性停產，更像是中途遭遇問題（客戶跑掉？種植失敗？）</div>
+          <strong>菜心（V0016）</strong>：6、7、8 月連續三個月無銷售，9 月恢復。<br><br>
+          這類「消失又出現」的品項，如果是可控因素導致，調整後可以補回這段的損失收入。
+        </div>
+      </div>
+
+      <!-- Problem 6: Tomato fragmentation -->
+      <div class="diag-card info">
+        <div class="diag-card-header">
+          <span class="diag-card-icon">🍅</span>
+          <div>
+            <div class="diag-card-title">問題六：番茄規格太分散，可能自己搶市場</div>
+            <span class="diag-card-label label-info">📌 值得評估</span>
+          </div>
+        </div>
+        <div class="diag-body">
+          同時販賣 <strong>番茄 XL、L、M、S</strong> 四個規格，管理成本高，且：
+          <div class="diag-highlight">
+            番茄S 平均單價 約 17,000 LAK/kg，番茄M 平均約 19,000 LAK/kg，
+            規格越小單價越低，但 S 的產量不低，是否值得繼續？
+          </div>
+          番茄L 下半年幾乎斷貨，而番茄M 下半年單價反而衝到最高（10月 22,757 LAK）。
+          建議評估是否聚焦 <strong>M + L 兩個規格</strong>，把 XL 和 S 的資源集中過來。
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Recommendations -->
+    <div class="diag-reco" style="margin-top:20px">
+      <h3>💡 老闆行動建議（優先順序）</h3>
+      <div class="diag-reco-list">
+        <div class="diag-reco-item">
+          <div class="diag-reco-num">1</div>
+          <div class="diag-reco-text"><strong>立即砍掉或縮減</strong>西洋菜、南瓜等全年金額低於 500 萬 LAK 的品項，把土地資源移到前 5 名主力商品，直接提升整體收入。</div>
+        </div>
+        <div class="diag-reco-item">
+          <div class="diag-reco-num">2</div>
+          <div class="diag-reco-text"><strong>規劃淡季補強品項</strong>：找出 7–9 月還能維持銷售的品項（目前這段缺口最大），優先增加這些品項的種植量，平衡全年現金流。</div>
+        </div>
+        <div class="diag-reco-item">
+          <div class="diag-reco-num">3</div>
+          <div class="diag-reco-text"><strong>追查冰山生菜與紅珊瑚生菜</strong>中途停賣的原因，如果是可控因素，恢復後每年可多回收這段的損失。</div>
+        </div>
+        <div class="diag-reco-item">
+          <div class="diag-reco-num">4</div>
+          <div class="diag-reco-text"><strong>建立統一定價制度</strong>，特別是芹菜、菜心這類波動異常的品項，避免旺季高價/淡季虧本的惡性循環。</div>
+        </div>
+        <div class="diag-reco-item">
+          <div class="diag-reco-num">5</div>
+          <div class="diag-reco-text"><strong>評估番茄規格整併</strong>，建議聚焦番茄 M + L，XL 和 S 的資源可以轉移到生菜類（青珊瑚、青牛油）等全年單價上升趨勢的品項。</div>
+        </div>
+      </div>
+    </div>`;
+}
+
 function renderSummary() {
     const rows = Object.entries(DATA).map(([code, [name, data]]) => {
         const totalQty = data.reduce((s, [,q]) => s + q, 0);
@@ -690,6 +943,7 @@ function render() {
     document.getElementById('content').innerHTML = html;
     renderGrandTotal();
     renderAnalytics();
+    renderDiagnosis();
     renderSummary();
     setTimeout(initCharts, 100);
 }
