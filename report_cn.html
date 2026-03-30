@@ -582,30 +582,38 @@ function renderDiagnosis() {
     const weakProds = products.filter(p=>p.months<=3&&p.totalAmt<5000000);
     const highVol   = [...products].filter(p=>p.months>1).sort((a,b)=>b.vol-a.vol).slice(0,3);
 
-    // Top 5 concentration table
+    // Top 5 concentration - div layout (no table)
     const top5Html = byAmt.slice(0,5).map((p,i) => {
         const pct = (p.totalAmt/totalAmt*100).toFixed(1);
         const barPct = Math.min(100, parseFloat(pct)*1.5).toFixed(0);
         const shortName = p.name.split(' ').slice(-1)[0];
-        return `<tr>
-            <td style="width:40%">${['🥇','🥈','🥉','4️⃣','5️⃣'][i]} ${shortName}</td>
-            <td style="width:60%">
-                <div style="color:#e67e22;font-weight:700;font-size:0.85em;margin-bottom:4px">${formatChinese(Math.round(p.totalAmt))} <span style="color:#e74c3c">(${pct}%)</span></div>
+        const colors = ['#e67e22','#e67e22','#e67e22','#95a5a6','#95a5a6'];
+        return `<div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:white;border-radius:8px;box-shadow:0 1px 4px rgba(0,0,0,0.06);margin-bottom:6px">
+            <span style="font-size:1.2em;min-width:24px">${['🥇','🥈','🥉','4️⃣','5️⃣'][i]}</span>
+            <div style="flex:1;min-width:0">
+                <div style="font-size:0.82em;font-weight:700;color:#2c3e50;margin-bottom:4px">${shortName}</div>
                 <div style="height:6px;background:#ecf0f1;border-radius:4px;overflow:hidden">
-                    <div style="width:${barPct}%;height:6px;background:#e67e22;border-radius:4px"></div>
+                    <div style="width:${barPct}%;height:6px;background:${colors[i]};border-radius:4px"></div>
                 </div>
-            </td>
-        </tr>`;
+            </div>
+            <div style="text-align:right;flex-shrink:0">
+                <div style="font-size:0.8em;font-weight:700;color:${colors[i]}">${formatChinese(Math.round(p.totalAmt))}</div>
+                <div style="font-size:0.75em;color:#e74c3c;font-weight:700">${pct}%</div>
+            </div>
+        </div>`;
     }).join('');
 
-    // Volatility table - 2 columns, stacked content
-    const volHtml = highVol.map(p => `<tr>
-        <td style="width:40%">${p.name.split(' ').slice(-1)[0]}</td>
-        <td style="width:60%">
-            <div style="font-size:0.82em;margin-bottom:2px"><span style="color:#3498db">${p.minP.toFixed(0)}</span> <span style="color:#999">→</span> <span style="color:#e74c3c">${p.maxP.toFixed(0)}</span> <span style="font-size:0.85em;color:#999">LAK</span></div>
-            <div style="color:#8e44ad;font-weight:700;font-size:0.9em">波動 ${p.vol.toFixed(0)}%</div>
-        </td>
-    </tr>`).join('');
+    // Volatility - div layout (no table)
+    const volHtml = highVol.map(p => `<div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:white;border-radius:8px;box-shadow:0 1px 4px rgba(0,0,0,0.06);margin-bottom:6px">
+        <div style="flex:1;min-width:0">
+            <div style="font-size:0.82em;font-weight:700;color:#2c3e50;margin-bottom:3px">${p.name.split(' ').slice(-1)[0]}</div>
+            <div style="font-size:0.78em"><span style="color:#3498db">${p.minP.toFixed(0)}</span> <span style="color:#aaa">→</span> <span style="color:#e74c3c">${p.maxP.toFixed(0)}</span> <span style="color:#aaa">LAK</span></div>
+        </div>
+        <div style="flex-shrink:0;background:#f3e5f5;border-radius:6px;padding:4px 10px;text-align:center">
+            <div style="font-size:0.7em;color:#7b1fa2;margin-bottom:1px">波動幅度</div>
+            <div style="font-size:1em;font-weight:800;color:#8e44ad">${p.vol.toFixed(0)}%</div>
+        </div>
+    </div>`).join('');
 
     // Weak/abnormal products list
     const weakHtml = weakProds.map(p =>
@@ -634,10 +642,7 @@ function renderDiagnosis() {
         <div class="diag-body">
           前 5 名品項佔全年總收入 <strong style="color:#e74c3c;font-size:1.1em">${top5Pct}%</strong>，其餘 17 種品項合計不到 ${(100-parseFloat(top5Pct)).toFixed(1)}%。
           一旦主力品項出現天氣、病蟲害或客戶流失，整體收入將大幅崩潰。
-          <table class="diag-table" style="margin-top:12px">
-            <thead><tr><th style="width:40%">品項</th><th style="width:60%">總金額 / 佔比</th></tr></thead>
-            <tbody>${top5Html}</tbody>
-          </table>
+          <div style="margin-top:12px">${top5Html}</div>
         </div>
       </div>
 
@@ -691,10 +696,7 @@ function renderDiagnosis() {
         </div>
         <div class="diag-body">
           以下品項單價波動幅度遠超正常市場行情：
-          <table class="diag-table" style="margin-top:10px">
-            <thead><tr><th style="width:40%">品項</th><th style="width:60%">單價區間 → 波動幅度</th></tr></thead>
-            <tbody>${volHtml}</tbody>
-          </table>
+          <div style="margin-top:10px">${volHtml}</div>
           <div class="diag-highlight red">
             芹菜最低 4,289、最高 38,942 LAK/kg，波動幅度超過 <strong>800%</strong>，屬於嚴重異常
           </div>
