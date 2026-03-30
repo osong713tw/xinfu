@@ -28,8 +28,8 @@
         .stat-card.average { border-left-color: #f39c12; }
         .stat-card.average .stat-label { color: #f39c12; }
         .data-chart-layout { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: start; }
-        .table-wrapper { background: white; border-radius: 6px; padding: 15px; }
-        table { width: 100%; border-collapse: collapse; font-size: 0.85em; }
+        .table-wrapper { background: white; border-radius: 6px; padding: 15px; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+        table { width: 100%; border-collapse: collapse; font-size: 0.85em; min-width: 600px; }
         th { background: #34495e; color: white; padding: 10px 4px; text-align: center; font-weight: 600; }
         td { padding: 10px 4px; text-align: right; border-bottom: 1px solid #ecf0f1; }
         td:first-child { text-align: center; color: #2c3e50; font-weight: 600; background: #f8f9fa; width: 80px; }
@@ -46,6 +46,19 @@
         .github-link a { color: #3498db; text-decoration: none; font-weight: 600; }
         .github-link a:hover { text-decoration: underline; }
         @media (max-width: 1024px) { .data-chart-layout { grid-template-columns: 1fr; } }
+        @media (max-width: 700px) {
+            .content { padding: 15px; }
+            .product-section { padding: 15px; margin-bottom: 30px; }
+            .stats-grid { grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+            .stat-card { padding: 10px 8px; }
+            .stat-label { font-size: 0.75em; }
+            .stat-value { font-size: 1em; }
+            .chart-wrapper { height: 260px; }
+            .table-wrapper { padding: 10px 8px; }
+            table { font-size: 0.78em; }
+            td, th { padding: 8px 3px; }
+            td:first-child { width: 65px; font-size: 0.82em; }
+        }
         .summary-section { padding: 25px 20px; background: #f8f9fa; border-bottom: 3px solid #ecf0f1; }
         .summary-section h2 { font-size: 1.4em; color: #2c3e50; margin-bottom: 20px; padding-bottom: 10px; border-bottom: 2px solid #3498db; display: flex; align-items: center; gap: 10px; }
 
