@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>蔬菜銷售分析報告 - 2025年</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Microsoft YaHei', '微軟正黑體', Arial, sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #333; padding: 20px; min-height: 100vh; }
+        .container { max-width: 1400px; margin: 0 auto; background: white; border-radius: 12px; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3); overflow: hidden; }
+        .header { background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%); color: white; padding: 40px; text-align: center; }
+        .header h1 { font-size: 2.5em; margin-bottom: 10px; font-weight: 700; }
+        .header p { font-size: 1.1em; opacity: 0.9; }
+        .content { padding: 40px; }
+        .product-section { margin-bottom: 50px; border: 2px solid #ecf0f1; border-radius: 8px; padding: 25px; background: #f8f9fa; }
+        .product-title { display: flex; align-items: center; gap: 15px; margin-bottom: 20px; padding-bottom: 15px; border-bottom: 3px solid #3498db; }
+        .product-code { background: #3498db; color: white; padding: 8px 15px; border-radius: 6px; font-weight: bold; min-width: 120px; text-align: center; }
+        .product-name { font-size: 1.3em; font-weight: 600; color: #2c3e50; flex: 1; }
+        .stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-bottom: 25px; }
+        .stat-card { background: white; padding: 15px; border-radius: 6px; border-left: 4px; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08); }
+        .stat-label { font-size: 0.9em; color: #7f8c8d; margin-bottom: 5px; font-weight: 600; }
+        .stat-value { font-size: 1.2em; font-weight: 700; color: #2c3e50; }
+        .stat-card.highest { border-left-color: #e74c3c; }
+        .stat-card.highest .stat-label { color: #e74c3c; }
+        .stat-card.lowest { border-left-color: #27ae60; }
+        .stat-card.lowest .stat-label { color: #27ae60; }
+        .stat-card.average { border-left-color: #f39c12; }
+        .stat-card.average .stat-label { color: #f39c12; }
+        .data-chart-layout { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: start; }
+        .table-wrapper { background: white; border-radius: 6px; padding: 15px; }
+        table { width: 100%; border-collapse: collapse; font-size: 0.85em; }
+        th { background: #34495e; color: white; padding: 10px 4px; text-align: center; font-weight: 600; }
+        td { padding: 10px 4px; text-align: right; border-bottom: 1px solid #ecf0f1; }
+        td:first-child { text-align: center; color: #2c3e50; font-weight: 600; background: #f8f9fa; width: 80px; }
+        tr:hover td { background-color: #f0f5ff; }
+        .price-lak { color: #3498db; font-weight: 600; }
+        .price-twd { color: #9b59b6; }
+        .quantity { color: #16a085; font-weight: 600; }
+        .highest-price { background: #ffebee !important; color: #c62828 !important; font-weight: 700; border-radius: 3px; }
+        .lowest-price { background: #e8f5e9 !important; color: #1b5e20 !important; font-weight: 700; border-radius: 3px; }
+        .chart-wrapper { background: white; padding: 15px; border-radius: 6px; position: relative; height: 380px; width: 100%; }
+        .footer { background: #ecf0f1; padding: 20px; text-align: center; color: #7f8c8d; border-top: 1px solid #bdc3c7; }
+        .github-link { margin-top: 15px; text-align: center; }
+        .github-link a { color: #3498db; text-decoration: none; font-weight: 600; }
+        .github-link a:hover { text-decoration: underline; }
+        @media (max-width: 1024px) { .data-chart-layout { grid-template-columns: 1fr; } }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🥬 蔬菜銷售分析報告</h1>
+            <p>2025年度 - 完整月度分析</p>
+        </div>
+        <div class="content" id="content"></div>
+        <div class="footer">
+            <p>🌾 蔬菜銷售分析報告 | 匯率: 1 LAK = 0.00318 TWD | 報告時間: 2025年度</p>
+            <div class="github-link">
+                <a href="https://github.com/xinfufreshemex/XFFEMEX" target="_blank">📊 查看 GitHub 源代碼</a>
+            </div>
+        </div>
+    </div>
+
+<script>
+const RATE = 0.00318;
+const DATA = {
+    "T0031.01": ["ZUCCHINI 南瓜", [[1, 10, 170000], [7, 5, 60000], [8, 65, 843000]]],
+    "V0001": ["MINI PAKCHOY A 小白菜A", [[1, 11408, 111662000], [2, 15850, 142610000], [3, 15441, 183446000], [4, 15262, 212150000], [5, 14776, 159789000], [6, 8496, 129010000], [7, 5493, 117381000], [8, 6809, 134452000], [9, 9730, 152682500], [10, 9650, 183715000], [11, 8798, 184516500], [12, 10110, 150640000]]],
+    "V0002": ["MINI PAKCHOI B 小白菜B", [[1, 1470, 10210000], [2, 285, 1975000], [3, 150, 1050000], [6, 1269, 11240000], [7, 1926, 33173000], [8, 2485, 38395000], [9, 2310, 16500000], [10, 460, 5915000], [12, 475, 3605000]]],
+    "V0004": ["GREEN CORAL 青珊瑚生菜", [[1, 5249, 60551000], [2, 6733, 40758000], [3, 5851, 60708000], [4, 3466, 72929000], [5, 6650, 158228000], [6, 6202, 171716000], [7, 6614, 169771000], [8, 4162, 125596000], [9, 5502, 156525000], [10, 3639, 124773000], [11, 4280, 152809000], [12, 10044, 196540000]]],
+    "V0005": ["GREEN BUTTER HEAD 青牛油生菜", [[1, 5303, 44636000], [2, 6149, 38386000], [3, 5965, 66303000], [4, 5348, 107989000], [5, 7702, 167003400], [6, 8000, 196662000], [7, 7705, 216202316.48], [8, 4863, 142346595.2], [9, 7900, 214984327.04], [10, 4228, 135954839.68], [11, 5132, 177693000], [12, 11890, 168305000]]],
+    "V0006": ["RED CORAL 红珊瑚生菜", [[1, 877, 2540000], [2, 5, 15000], [4, 3, 45000]]],
+    "V0007": ["ITALY SALAD 意大利生菜", [[1, 3799, 30490000], [2, 2355, 13342000], [3, 4820, 48295000], [4, 5879, 116866000], [5, 5147, 125299000], [6, 4601, 131135000], [7, 3687, 92880000], [8, 2668, 75577000], [9, 1592, 45340000], [10, 1407, 44781000], [11, 1590, 54080000], [12, 8048, 195058000]]],
+    "V0008": ["JP CUCUMBER 日本青瓜", [[1, 5117, 45429000], [2, 5536, 49687000], [3, 10946, 91018000], [4, 15184, 105783000], [5, 13109, 125745000], [6, 8568, 102881000], [7, 6247, 80089921.84], [8, 7102, 58686460.04], [9, 6037, 43272767.04], [10, 1427, 13659012.32], [11, 406, 6000000], [12, 2383, 30258000]]],
+    "V0008.1": ["JP CUCUMBER B 日本青瓜B", [[1, 285, 1296000], [2, 390, 1403000], [3, 43, 192000], [5, 1207, 5679000], [6, 1332, 7495000], [7, 1442, 8269000], [8, 1716, 5554000], [9, 1874, 7036000], [10, 644, 4324000], [12, 36, 250000]]],
+    "V0009": ["ICEBERG 冰山生菜", [[1, 16986, 52947000], [2, 14784, 69856000], [3, 13388, 51680000], [4, 4739, 26582000], [5, 2865, 20425000], [6, 650, 4195000], [12, 2791, 16463000]]],
+    "V0010": ["BABY ROMANCE 小罗马生菜", [[1, 26428, 187351000], [2, 20067, 116078000], [3, 15611, 167346500], [4, 18426, 312489000], [5, 9710, 213372000], [6, 6458, 143896000], [7, 7703, 184425461.32], [8, 5614, 157921551.04], [9, 7807, 174530031.04], [10, 1859, 55497465.6], [11, 5153, 171972000], [12, 6615, 115375000]]],
+    "V0011": ["KAILAN 芥兰", [[1, 3560, 44676000], [2, 6120, 25625000], [3, 3802, 42280000], [4, 5733, 90149000], [5, 2527, 52036000], [6, 1396, 38714000], [7, 1230, 36035000], [8, 939, 23853000], [9, 1636, 44641000], [10, 2927, 91061000], [11, 1392, 46108000], [12, 1083, 24143000]]],
+    "V0012": ["CHINESE CABBAGE 中国包菜", [[1, 5845, 44040000], [2, 4048, 31679000], [3, 3835, 28620000], [4, 8957, 54808500], [5, 2315, 18085000], [6, 424, 3632000], [8, 636, 2703500], [9, 15, 75000], [11, 545, 5904000], [12, 1992, 14527000]]],
+    "V0013": ["MASTARD CHINESE 芥菜", [[1, 5413, 44855000], [2, 7847, 59808500], [3, 7300, 60748500], [4, 14228, 97515500], [5, 3559, 27950500], [6, 2137, 17381000], [7, 972, 12366000], [8, 835, 8614000], [9, 4481, 35012000], [10, 7969, 65681000], [11, 7618, 100960000], [12, 7312, 96308000]]],
+    "V0014": ["CELERY CHINESE 芹菜", [[1, 1464, 13394000], [2, 1754, 7522000], [3, 1259, 6190000], [4, 452, 7256000], [5, 532, 14967000], [6, 63, 3418000], [7, 780, 25976000], [8, 755, 26370000], [9, 1118, 24762000], [10, 1639, 63863000], [11, 315, 13972000], [12, 211, 5575000]]],
+    "V0015": ["WATER CRESS 西洋菜", [[1, 136, 1152000], [2, 126, 765000], [3, 147, 1443000], [4, 80, 821000], [5, 104, 1055000]]],
+    "V0016": ["CHOYSUM 菜心", [[1, 3549, 29829000], [2, 1979, 11456500], [3, 1050, 9004500], [4, 3643, 30707500], [5, 903, 7783500], [9, 1829, 18558000], [10, 3178, 40567000], [11, 3149, 45374000], [12, 2639, 25805000]]],
+    "V0017": ["TOMATO XL 番茄XL", [[1, 4287, 47027000], [2, 3992, 24735000], [3, 1438, 11413000], [4, 2250, 33722000], [5, 2194, 40018000], [6, 1270, 24735000], [7, 1912, 33205605.02], [8, 2948, 45026702.64], [9, 3732, 79007797.6], [10, 971, 20433754.72], [12, 626, 11914000]]],
+    "V0018": ["TOMATO L 番茄L", [[1, 19213, 225360000], [2, 21075, 117761000], [3, 14654, 108036000], [4, 14070, 174068000], [5, 10434, 167616000], [6, 6453, 123719500], [7, 8999, 171727331.76], [8, 6725, 122527586.4], [9, 9525, 201890041.76], [10, 6802, 152397847.84], [11, 440, 10550000], [12, 1830, 35710000]]],
+    "V0019": ["TOMATO M 番茄M", [[1, 21557, 190731000], [2, 22085, 103609000], [3, 22677, 122313000], [4, 13515, 136990000], [5, 10625, 148854000], [6, 8634, 147794000], [7, 8983, 170845252], [8, 8614, 163106879.2], [9, 10294, 224507196.4], [10, 12633, 287422595.2], [11, 3000, 71240000], [12, 3264, 66402000]]],
+    "V0020": ["TOMATO S 番茄S", [[1, 4824, 34250000], [2, 4763, 14990000], [3, 6914, 24406000], [4, 3970, 27380000], [5, 2320, 26800000], [6, 1875, 28375000], [7, 1870, 32710000], [8, 2624, 47025000], [9, 3769, 74685000], [10, 6667, 139887000], [11, 3174, 69068000], [12, 1328, 24866000]]],
+    "V0023": ["RED HOT CHILLI 红辣椒", [[1, 10, 330000], [2, 1276, 12960000], [3, 2203, 26819000], [4, 1775, 25219000], [5, 4818, 38929000], [6, 1539, 11747000], [7, 413, 3439964.8], [8, 86, 860000]]],
+    "V0024": ["HOT CHILLI 辣椒", [[1, 2451, 17011000], [2, 148, 756000], [3, 459, 6734000], [4, 204, 1580000], [5, 922, 5817000], [6, 986, 9391000], [7, 777, 9572803.2], [8, 376, 5040000], [9, 30, 800000], [10, 5, 150000]]],
+    "V0025": ["CAPSICUM GREEN 青灯椒", [[1, 556, 11808000], [2, 327, 4237000], [3, 47, 985000], [4, 399, 7340000], [5, 941, 19500000], [6, 25, 375000]]]
+};
+
+const charts = {};
+
+function initCharts() {
+    let idx = 0;
+    for (const [code, [name, data]] of Object.entries(DATA)) {
+        idx++;
+        const prices = new Array(12).fill(null);
+        const quantities = new Array(12).fill(null);
+        const validPrices = [];
+        
+        for (const [m, q, a] of data) {
+            prices[m-1] = a/q;
+            quantities[m-1] = q;
+            validPrices.push(a/q);
+        }
+        
+        if (!validPrices.length) continue;
+        
+        const ctx = document.getElementById(`c${idx}`);
+        if (!ctx) continue;
+        
+        const chartCtx = ctx.getContext('2d');
+        charts[idx] = new Chart(chartCtx, {
+            type: 'line',
+            data: {
+                labels: ['1','2','3','4','5','6','7','8','9','10','11','12'],
+                datasets: [{
+                    label: '單價 (LAK)',
+                    data: prices,
+                    borderColor: '#3498db',
+                    backgroundColor: 'rgba(52,152,219,0.08)',
+                    borderWidth: 2.5,
+                    tension: 0.4,
+                    fill: true,
+                    pointRadius: 4,
+                    pointBackgroundColor: '#3498db',
+                    pointBorderColor: '#fff',
+                    pointBorderWidth: 2,
+                    yAxisID: 'y',
+                    spanGaps: true
+                },{
+                    label: '產量 (kg)',
+                    data: quantities,
+                    borderColor: '#e74c3c',
+                    backgroundColor: 'rgba(231,76,60,0.08)',
+                    borderWidth: 2.5,
+                    tension: 0.4,
+                    fill: true,
+                    pointRadius: 4,
+                    pointBackgroundColor: '#e74c3c',
+                    pointBorderColor: '#fff',
+                    pointBorderWidth: 2,
+                    yAxisID: 'y1',
+                    spanGaps: true
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: {mode: 'index', intersect: false},
+                plugins: {legend: {display: true, labels: {font: {size: 11, weight: 'bold'}, usePointStyle: true, padding: 15}}},
+                scales: {
+                    y: {type: 'linear', display: true, position: 'left', title: {display: true, text: '單價 (LAK)', font: {weight: 'bold', size: 10}}, ticks: {callback: v => v.toLocaleString(), font: {size: 9}}},
+                    y1: {type: 'linear', display: true, position: 'right', title: {display: true, text: '產量 (kg)', font: {weight: 'bold', size: 10}}, grid: {drawOnChartArea: false}, ticks: {callback: v => v.toLocaleString(), font: {size: 9}}},
+                    x: {ticks: {font: {size: 9}}}
+                }
+            }
+        });
+    }
+}
+
+function render() {
+    const html = Object.entries(DATA).map(([code, [name, data]], idx) => {
+        const prices = new Array(12).fill(null);
+        const quantities = new Array(12).fill(null);
+        const validPrices = [];
+        
+        for (const [m, q, a] of data) {
+            prices[m-1] = a/q;
+            quantities[m-1] = q;
+            validPrices.push(a/q);
+        }
+        
+        if (!validPrices.length) return '';
+        
+        const maxP = Math.max(...validPrices);
+        const minP = Math.min(...validPrices);
+        const avgP = validPrices.reduce((a,b) => a+b) / validPrices.length;
+        
+        let priceHtml = '';
+        let twdHtml = '';
+        let qtyHtml = '';
+        
+        for (let m = 0; m < 12; m++) {
+            if (prices[m] !== null) {
+                const cls = Math.abs(prices[m] - maxP) < 0.01 ? 'highest-price' : Math.abs(prices[m] - minP) < 0.01 ? 'lowest-price' : '';
+                priceHtml += `<td class="price-lak ${cls}">${prices[m].toFixed(0)}</td>`;
+                twdHtml += `<td class="price-twd ${cls}">${(prices[m]*RATE).toFixed(2)}</td>`;
+            } else {
+                priceHtml += '<td class="price-lak">-</td>';
+                twdHtml += '<td class="price-twd">-</td>';
+            }
+            qtyHtml += quantities[m] ? `<td class="quantity">${quantities[m].toLocaleString()}</td>` : '<td class="quantity">-</td>';
+        }
+        
+        return `<div class="product-section">
+            <div class="product-title"><div class="product-code">${code}</div><div class="product-name">${name}</div></div>
+            <div class="stats-grid">
+                <div class="stat-card highest"><div class="stat-label">🔴 最高單價</div><div class="stat-value">${maxP.toFixed(0)}</div><div style="font-size: 0.85em; color: #7f8c8d;">${(maxP*RATE).toFixed(2)} TWD</div></div>
+                <div class="stat-card lowest"><div class="stat-label">🟢 最低單價</div><div class="stat-value">${minP.toFixed(0)}</div><div style="font-size: 0.85em; color: #7f8c8d;">${(minP*RATE).toFixed(2)} TWD</div></div>
+                <div class="stat-card average"><div class="stat-label">📊 平均單價</div><div class="stat-value">${avgP.toFixed(0)}</div><div style="font-size: 0.85em; color: #7f8c8d;">${(avgP*RATE).toFixed(2)} TWD</div></div>
+            </div>
+            <div class="data-chart-layout">
+                <div class="table-wrapper">
+                    <table><thead><tr><th>月份</th><th>1</th><th>2</th><th>3</th><th>4</th><th>5</th><th>6</th><th>7</th><th>8</th><th>9</th><th>10</th><th>11</th><th>12</th></tr></thead><tbody>
+                        <tr><td>單價(LAK)</td>${priceHtml}</tr>
+                        <tr><td>單價(TWD)</td>${twdHtml}</tr>
+                        <tr><td>產量(kg)</td>${qtyHtml}</tr>
+                    </tbody></table>
+                </div>
+                <div class="chart-wrapper"><canvas id="c${idx+1}"></canvas></div>
+            </div>
+        </div>`;
+    }).join('');
+    
+    document.getElementById('content').innerHTML = html;
+    setTimeout(initCharts, 100);
+}
+
+window.addEventListener('load', render);
+</script>
+</body>
+</html>
