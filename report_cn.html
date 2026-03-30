@@ -124,6 +124,41 @@
             .grand-total-grid { grid-template-columns: 1fr; gap: 10px; }
             .grand-total-item-value { font-size: 1.6em; }
         }
+
+        /* ── Analytics section ── */
+        .analytics-section { padding: 30px 40px; background: #fff; border-bottom: 3px solid #ecf0f1; }
+        .analytics-section h2 { font-size: 1.3em; color: #2c3e50; margin-bottom: 24px; padding-bottom: 10px; border-bottom: 2px solid #e67e22; display: flex; align-items: center; gap: 10px; }
+        .analytics-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 24px; }
+        .analytics-grid.full { grid-template-columns: 1fr; }
+        .analytics-card { background: #f8f9fa; border-radius: 10px; padding: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.06); }
+        .analytics-card h3 { font-size: 1em; color: #2c3e50; margin-bottom: 16px; font-weight: 700; }
+        .analytics-chart-box { position: relative; height: 340px; }
+        .analytics-chart-box.tall { height: 440px; }
+        .rank-list { list-style: none; display: flex; flex-direction: column; gap: 8px; }
+        .rank-item { display: flex; align-items: center; gap: 10px; background: white; border-radius: 8px; padding: 10px 12px; box-shadow: 0 1px 4px rgba(0,0,0,0.06); }
+        .rank-medal { font-size: 1.3em; min-width: 26px; text-align: center; }
+        .rank-info { flex: 1; min-width: 0; }
+        .rank-name { font-size: 0.8em; font-weight: 700; color: #2c3e50; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .rank-bar-wrap { height: 6px; background: #ecf0f1; border-radius: 3px; margin-top: 4px; }
+        .rank-bar { height: 6px; border-radius: 3px; }
+        .rank-val { font-size: 0.78em; font-weight: 700; min-width: 90px; text-align: right; white-space: nowrap; }
+        .alert-list { display: flex; flex-direction: column; gap: 10px; }
+        .alert-item { display: flex; align-items: flex-start; gap: 12px; background: white; border-radius: 8px; padding: 12px 14px; border-left: 4px solid #e74c3c; box-shadow: 0 1px 4px rgba(0,0,0,0.06); }
+        .alert-item.warn { border-left-color: #f39c12; }
+        .alert-item.good { border-left-color: #27ae60; }
+        .alert-icon { font-size: 1.2em; }
+        .alert-title { font-size: 0.85em; font-weight: 700; color: #2c3e50; margin-bottom: 2px; }
+        .alert-desc { font-size: 0.78em; color: #7f8c8d; }
+        .product-badge { display: inline-block; font-size: 0.7em; font-weight: 700; padding: 2px 8px; border-radius: 20px; margin-left: 8px; vertical-align: middle; }
+        .badge-star { background: #fff3cd; color: #856404; }
+        .badge-weak { background: #f8d7da; color: #842029; }
+        .badge-volatile { background: #e2d9f3; color: #4a235a; }
+        @media (max-width: 700px) {
+            .analytics-section { padding: 20px 15px; }
+            .analytics-grid { grid-template-columns: 1fr; }
+            .analytics-chart-box { height: 260px; }
+            .analytics-chart-box.tall { height: 320px; }
+        }
     </style>
 </head>
 <body>
@@ -133,6 +168,7 @@
             <p>2025年度 - 完整月度分析</p>
         </div>
         <div class="grand-total-banner" id="grand-total"></div>
+        <div class="analytics-section" id="analytics"></div>
         <div class="summary-section" id="summary"></div>
         <div class="content" id="content"></div>
         <div class="footer">
@@ -290,6 +326,193 @@ function renderGrandTotal() {
         </div>`;
 }
 
+function renderAnalytics() {
+    // ── Compute per-product totals ──
+    const products = Object.entries(DATA).map(([code, [name, data]]) => {
+        const totalQty  = data.reduce((s,[,q])=>s+q, 0);
+        const totalAmt  = data.reduce((s,[,,a])=>s+a, 0);
+        const avgPrice  = totalAmt / totalQty;
+        const prices    = data.map(([,q,a])=>a/q);
+        const maxP      = Math.max(...prices);
+        const minP      = Math.min(...prices);
+        const volatility = prices.length > 1 ? (maxP - minP) / avgPrice * 100 : 0;
+        const months    = data.length;
+        return { code, name: name.split(' ').slice(-1)[0] || name, fullName: name, totalQty, totalAmt, avgPrice, volatility, months };
+    });
+
+    // ── Monthly totals (all products combined) ──
+    const monthlyAmt = new Array(12).fill(0);
+    const monthlyQty = new Array(12).fill(0);
+    for (const [, [, data]] of Object.entries(DATA)) {
+        for (const [m, q, a] of data) {
+            monthlyAmt[m-1] += a;
+            monthlyQty[m-1] += q;
+        }
+    }
+
+    // ── Rankings ──
+    const byAmt      = [...products].sort((a,b)=>b.totalAmt - a.totalAmt);
+    const byVolatile = [...products].sort((a,b)=>b.volatility - a.volatility);
+    const top3       = byAmt.slice(0, 3);
+    const bottom3    = byAmt.slice(-3).reverse();
+    const maxAmt     = byAmt[0].totalAmt;
+
+    const medals = ['🥇','🥈','🥉','4️⃣','5️⃣','6️⃣','7️⃣','8️⃣','9️⃣','🔟'];
+    const barColors = ['#e67e22','#3498db','#27ae60','#9b59b6','#e74c3c','#1abc9c','#f39c12','#2980b9','#8e44ad','#16a085'];
+
+    // ── Rank list HTML helper ──
+    function rankListHtml(items, colorFn) {
+        return items.map((r, i) => {
+            const pct = (r.totalAmt / maxAmt * 100).toFixed(1);
+            const color = typeof colorFn === 'function' ? colorFn(i) : barColors[i % barColors.length];
+            return `<li class="rank-item">
+                <span class="rank-medal">${medals[i]}</span>
+                <div class="rank-info">
+                    <div class="rank-name">${r.fullName}</div>
+                    <div class="rank-bar-wrap"><div class="rank-bar" style="width:${pct}%;background:${color}"></div></div>
+                </div>
+                <span class="rank-val" style="color:${color}">${formatChinese(Math.round(r.totalAmt))}</span>
+            </li>`;
+        }).join('');
+    }
+
+    // ── Risk alerts ──
+    const alerts = [];
+    // High volatility
+    byVolatile.slice(0,3).forEach(p => {
+        if (p.volatility > 30) alerts.push({ type:'danger', icon:'⚠️', title:`${p.fullName} 價格波動大`, desc:`單價波動幅度 ${p.volatility.toFixed(0)}%，風險較高，建議評估定價策略` });
+    });
+    // Short season products
+    products.filter(p=>p.months<=3 && p.totalAmt < 5000000).forEach(p => {
+        alerts.push({ type:'warn', icon:'📉', title:`${p.fullName} 銷售月份少`, desc:`全年僅 ${p.months} 個月有銷售，可評估是否值得繼續種植` });
+    });
+    // Star products
+    top3.forEach(p => {
+        alerts.push({ type:'good', icon:'⭐', title:`${p.fullName} 是明星商品`, desc:`年度總金額 ${formatChinese(Math.round(p.totalAmt))} LAK，貢獻最大，重點維護` });
+    });
+
+    const alertsHtml = alerts.map(a => `
+        <div class="alert-item ${a.type==='warn'?'warn':a.type==='good'?'good':''}">
+            <span class="alert-icon">${a.icon}</span>
+            <div><div class="alert-title">${a.title}</div><div class="alert-desc">${a.desc}</div></div>
+        </div>`).join('');
+
+    document.getElementById('analytics').innerHTML = `
+        <h2>📊 老闆重點分析</h2>
+
+        <!-- Row 1: Monthly revenue trend + product ranking -->
+        <div class="analytics-grid">
+            <div class="analytics-card">
+                <h3>📈 全年每月總收入走勢</h3>
+                <div class="analytics-chart-box"><canvas id="ac-monthly"></canvas></div>
+            </div>
+            <div class="analytics-card">
+                <h3>🏆 各品項總金額排行（前10）</h3>
+                <div class="analytics-chart-box"><canvas id="ac-rank"></canvas></div>
+            </div>
+        </div>
+
+        <!-- Row 2: Top 3 / Bottom 3 lists + risk alerts -->
+        <div class="analytics-grid">
+            <div class="analytics-card">
+                <h3>🌟 明星商品 Top 3</h3>
+                <ul class="rank-list">${rankListHtml(top3, i=>['#e67e22','#f39c12','#e74c3c'][i])}</ul>
+                <h3 style="margin-top:20px">⚠️ 待檢討商品 Bottom 3</h3>
+                <ul class="rank-list">${rankListHtml(bottom3, ()=>'#95a5a6')}</ul>
+            </div>
+            <div class="analytics-card">
+                <h3>🔔 重點警示 &amp; 建議</h3>
+                <div class="alert-list">${alertsHtml}</div>
+            </div>
+        </div>
+
+        <!-- Row 3: Price volatility chart -->
+        <div class="analytics-grid full">
+            <div class="analytics-card">
+                <h3>📉 各品項單價波動幅度（%）— 越高代表風險越大</h3>
+                <div class="analytics-chart-box"><canvas id="ac-volatility"></canvas></div>
+            </div>
+        </div>`;
+
+    // ── Charts ──
+    // 1. Monthly revenue trend
+    new Chart(document.getElementById('ac-monthly').getContext('2d'), {
+        type: 'bar',
+        data: {
+            labels: ['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'],
+            datasets: [{
+                label: '月收入 (LAK)',
+                data: monthlyAmt,
+                backgroundColor: monthlyAmt.map(v => v === Math.max(...monthlyAmt) ? '#e74c3c' : v === Math.min(...monthlyAmt.filter(x=>x>0)) ? '#27ae60' : '#3498db'),
+                borderRadius: 6,
+                yAxisID: 'y'
+            },{
+                label: '月產量 (kg)',
+                data: monthlyQty,
+                type: 'line',
+                borderColor: '#f39c12',
+                backgroundColor: 'rgba(243,156,18,0.08)',
+                borderWidth: 2.5,
+                tension: 0.4,
+                fill: true,
+                pointRadius: 4,
+                pointBackgroundColor: '#f39c12',
+                yAxisID: 'y1',
+                spanGaps: true
+            }]
+        },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            interaction: { mode: 'index', intersect: false },
+            plugins: { legend: { labels: { font: { size: 11 }, usePointStyle: true } } },
+            scales: {
+                y:  { position: 'left',  title: { display: true, text: '金額 (LAK)', font:{size:10} }, ticks: { callback: v => formatChinese(Math.round(v)), font:{size:9} } },
+                y1: { position: 'right', title: { display: true, text: '產量 (kg)', font:{size:10} }, grid: { drawOnChartArea: false }, ticks: { callback: v => v.toLocaleString(), font:{size:9} } },
+                x:  { ticks: { font:{size:9} } }
+            }
+        }
+    });
+
+    // 2. Product ranking bar
+    const top10 = byAmt.slice(0,10);
+    new Chart(document.getElementById('ac-rank').getContext('2d'), {
+        type: 'bar',
+        data: {
+            labels: top10.map(p => p.name),
+            datasets: [{ label: '總金額 (LAK)', data: top10.map(p=>p.totalAmt), backgroundColor: barColors, borderRadius: 5 }]
+        },
+        options: {
+            indexAxis: 'y',
+            responsive: true, maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+                x: { ticks: { callback: v => formatChinese(Math.round(v)), font:{size:9} } },
+                y: { ticks: { font:{size:10,weight:'bold'} } }
+            }
+        }
+    });
+
+    // 3. Volatility chart
+    const sortedByVol = [...products].filter(p=>p.months>1).sort((a,b)=>b.volatility-a.volatility);
+    new Chart(document.getElementById('ac-volatility').getContext('2d'), {
+        type: 'bar',
+        data: {
+            labels: sortedByVol.map(p=>p.name),
+            datasets: [{ label: '價格波動幅度 (%)', data: sortedByVol.map(p=>p.volatility.toFixed(1)),
+                backgroundColor: sortedByVol.map(p => p.volatility > 80 ? '#e74c3c' : p.volatility > 50 ? '#f39c12' : '#3498db'),
+                borderRadius: 5 }]
+        },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+                y: { title: { display: true, text: '波動幅度 (%)', font:{size:10} }, ticks: { font:{size:9} } },
+                x: { ticks: { font:{size:9}, maxRotation: 45 } }
+            }
+        }
+    });
+}
+
 function renderSummary() {
     const rows = Object.entries(DATA).map(([code, [name, data]]) => {
         const totalQty = data.reduce((s, [,q]) => s + q, 0);
@@ -431,8 +654,20 @@ function render() {
         }
         
         const anchorId = 'prod-' + code.replace('.', '-');
+
+        // Compute badge
+        const allAmts = Object.values(DATA).map(([,d])=>d.reduce((s,[,,a])=>s+a,0));
+        const thisAmt = data.reduce((s,[,,a])=>s+a,0);
+        const sortedAmts = [...allAmts].sort((a,b)=>b-a);
+        const rank = sortedAmts.indexOf(thisAmt);
+        const volatility = validPrices.length > 1 ? (maxP - minP) / avgP * 100 : 0;
+        let badge = '';
+        if (rank < 3) badge = '<span class="product-badge badge-star">⭐ 明星商品</span>';
+        else if (rank >= sortedAmts.length - 3) badge = '<span class="product-badge badge-weak">📉 待檢討</span>';
+        if (volatility > 80) badge += '<span class="product-badge badge-volatile">⚡ 價格波動大</span>';
+
         return `<div class="product-section" id="${anchorId}">
-            <div class="product-title"><div class="product-code">${code}</div><div class="product-name">${name}</div></div>
+            <div class="product-title"><div class="product-code">${code}</div><div class="product-name">${name}${badge}</div></div>
             <div class="stats-grid">
                 <div class="stat-card highest"><div class="stat-label">🔴 最高單價</div><div class="stat-value">${maxP.toFixed(0)}</div><div style="font-size: 0.85em; color: #7f8c8d;">${(maxP*RATE).toFixed(2)} TWD</div></div>
                 <div class="stat-card lowest"><div class="stat-label">🟢 最低單價</div><div class="stat-value">${minP.toFixed(0)}</div><div style="font-size: 0.85em; color: #7f8c8d;">${(minP*RATE).toFixed(2)} TWD</div></div>
@@ -454,6 +689,7 @@ function render() {
     
     document.getElementById('content').innerHTML = html;
     renderGrandTotal();
+    renderAnalytics();
     renderSummary();
     setTimeout(initCharts, 100);
 }
