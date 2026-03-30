@@ -108,6 +108,22 @@
             .summary-table { display: none; }
             .summary-cards { display: flex; }
         }
+        /* Grand total banner */
+        .grand-total-banner { background: linear-gradient(135deg, #1a252f 0%, #2c3e50 100%); color: white; padding: 28px 40px; }
+        .grand-total-banner h2 { font-size: 1.1em; font-weight: 600; opacity: 0.8; margin-bottom: 18px; letter-spacing: 1px; text-align: center; }
+        .grand-total-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+        .grand-total-item { background: rgba(255,255,255,0.08); border-radius: 10px; padding: 16px 12px; text-align: center; border: 1px solid rgba(255,255,255,0.12); }
+        .grand-total-item-label { font-size: 0.78em; opacity: 0.7; margin-bottom: 8px; letter-spacing: 0.5px; }
+        .grand-total-item-value { font-size: 1.4em; font-weight: 800; line-height: 1.2; }
+        .grand-total-item-unit { font-size: 0.72em; opacity: 0.6; margin-top: 4px; }
+        .gt-qty { color: #2ecc71; }
+        .gt-lak { color: #f39c12; }
+        .gt-twd { color: #e74c3c; }
+        @media (max-width: 700px) {
+            .grand-total-banner { padding: 20px 15px; }
+            .grand-total-grid { grid-template-columns: 1fr; gap: 10px; }
+            .grand-total-item-value { font-size: 1.6em; }
+        }
     </style>
 </head>
 <body>
@@ -116,6 +132,7 @@
             <h1>🥬 蔬菜銷售分析報告</h1>
             <p>2025年度 - 完整月度分析</p>
         </div>
+        <div class="grand-total-banner" id="grand-total"></div>
         <div class="summary-section" id="summary"></div>
         <div class="content" id="content"></div>
         <div class="footer">
@@ -226,6 +243,53 @@ function initCharts() {
     }
 }
 
+function formatChinese(num) {
+    if (num >= 100000000) {
+        const yi = Math.floor(num / 100000000);
+        const wan = Math.round((num % 100000000) / 10000);
+        return wan > 0 ? `${yi}億${wan.toLocaleString()}萬` : `${yi}億`;
+    } else if (num >= 10000000) {
+        const qianwan = Math.floor(num / 10000000);
+        const wan = Math.round((num % 10000000) / 10000);
+        return wan > 0 ? `${qianwan}千${wan}萬` : `${qianwan}千萬`;
+    } else if (num >= 10000) {
+        const wan = Math.floor(num / 10000);
+        const qian = Math.round((num % 10000) / 1000);
+        return qian > 0 ? `${wan}萬${qian}千` : `${wan}萬`;
+    } else if (num >= 1000) {
+        const qian = Math.floor(num / 1000);
+        const bai = Math.round((num % 1000) / 100);
+        return bai > 0 ? `${qian}千${bai}百` : `${qian}千`;
+    }
+    return num.toLocaleString();
+}
+
+function renderGrandTotal() {
+    const grandQty = Object.values(DATA).reduce((s, [, data]) => s + data.reduce((ss, [,q]) => ss + q, 0), 0);
+    const grandAmt = Object.values(DATA).reduce((s, [, data]) => s + data.reduce((ss, [,,a]) => ss + a, 0), 0);
+    const grandTwd = grandAmt * RATE;
+
+    document.getElementById('grand-total').innerHTML = `
+        <h2>📊 2025 年度整體銷售總覽</h2>
+        <div class="grand-total-grid">
+            <div class="grand-total-item">
+                <div class="grand-total-item-label">🌿 總產量</div>
+                <div class="grand-total-item-value gt-qty">${formatChinese(grandQty)}</div>
+                <div class="grand-total-item-unit">公斤 (kg)</div>
+            </div>
+            <div class="grand-total-item">
+                <div class="grand-total-item-label">💰 總銷售額 (LAK)</div>
+                <div class="grand-total-item-value gt-lak">${formatChinese(Math.round(grandAmt))}</div>
+                <div class="grand-total-item-unit">寮幣</div>
+            </div>
+            <div class="grand-total-item">
+                <div class="grand-total-item-label">💵 總銷售額 (TWD)</div>
+                <div class="grand-total-item-value gt-twd">${formatChinese(Math.round(grandTwd))}</div>
+                <div class="grand-total-item-unit">新台幣</div>
+            </div>
+        </div>`;
+}
+
 function renderSummary() {
     const rows = Object.entries(DATA).map(([code, [name, data]]) => {
         const totalQty = data.reduce((s, [,q]) => s + q, 0);
@@ -246,8 +310,8 @@ function renderSummary() {
             <td><a class="summary-anchor" href="#${r.anchorId}">${r.name}</a></td>
             <td class="s-months">${r.months} 個月</td>
             <td class="s-qty">${r.totalQty.toLocaleString()} kg</td>
-            <td class="s-amount">${(r.totalAmt/1000000).toFixed(2)} M</td>
-            <td class="s-amount" style="color:#c0392b">${(r.totalAmt*RATE/1000).toFixed(1)} K</td>
+            <td class="s-amount">${formatChinese(Math.round(r.totalAmt))}</td>
+            <td class="s-amount" style="color:#c0392b">${formatChinese(Math.round(r.totalAmt*RATE))}</td>
             <td class="s-avgprice">${r.avgPrice.toFixed(0)}</td>
             <td class="s-avgprice">${(r.avgPrice*RATE).toFixed(2)}</td>
         </tr>`).join('');
@@ -267,11 +331,11 @@ function renderSummary() {
                 </div>
                 <div class="summary-card-stat">
                     <div class="summary-card-stat-label">總金額 (LAK)</div>
-                    <div class="summary-card-stat-value s-amount">${(r.totalAmt/1000000).toFixed(2)} M</div>
+                    <div class="summary-card-stat-value s-amount">${formatChinese(Math.round(r.totalAmt))}</div>
                 </div>
                 <div class="summary-card-stat">
                     <div class="summary-card-stat-label">總金額 (TWD)</div>
-                    <div class="summary-card-stat-value" style="color:#c0392b;font-weight:700">${(r.totalAmt*RATE/1000).toFixed(1)} K</div>
+                    <div class="summary-card-stat-value" style="color:#c0392b;font-weight:700">${formatChinese(Math.round(r.totalAmt*RATE))}</div>
                 </div>
                 <div class="summary-card-stat">
                     <div class="summary-card-stat-label">平均單價 (LAK)</div>
@@ -295,8 +359,8 @@ function renderSummary() {
                 <tr class="total-row">
                     <td colspan="3">🔢 合計</td>
                     <td class="s-qty">${grandQty.toLocaleString()} kg</td>
-                    <td class="s-amount">${(grandAmt/1000000).toFixed(2)} M</td>
-                    <td class="s-amount" style="color:#c0392b">${(grandAmt*RATE/1000).toFixed(1)} K</td>
+                    <td class="s-amount">${formatChinese(Math.round(grandAmt))}</td>
+                    <td class="s-amount" style="color:#c0392b">${formatChinese(Math.round(grandAmt*RATE))}</td>
                     <td colspan="2">—</td>
                 </tr>
             </tbody>
@@ -314,11 +378,11 @@ function renderSummary() {
                     </div>
                     <div class="summary-card-stat">
                         <div class="summary-card-stat-label">總金額 (LAK)</div>
-                        <div class="summary-card-stat-value">${(grandAmt/1000000).toFixed(2)} M</div>
+                        <div class="summary-card-stat-value">${formatChinese(Math.round(grandAmt))}</div>
                     </div>
                     <div class="summary-card-stat">
                         <div class="summary-card-stat-label">總金額 (TWD)</div>
-                        <div class="summary-card-stat-value">${(grandAmt*RATE/1000).toFixed(1)} K</div>
+                        <div class="summary-card-stat-value">${formatChinese(Math.round(grandAmt*RATE))}</div>
                     </div>
                 </div>
             </div>
@@ -389,6 +453,7 @@ function render() {
     }).join('');
     
     document.getElementById('content').innerHTML = html;
+    renderGrandTotal();
     renderSummary();
     setTimeout(initCharts, 100);
 }
