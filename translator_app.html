@@ -1,0 +1,1014 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#0a1628">
+<title>XIN FU 翻譯助手</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Lao:wght@400;600&family=Noto+Sans+Bengali:wght@400;600&family=Noto+Sans+Thai:wght@400;600&family=IBM+Plex+Mono:wght@400;500&family=Sora:wght@300;400;600;700&display=swap');
+
+  :root {
+    --bg: #060e1f;
+    --surface: #0d1e38;
+    --surface2: #142540;
+    --border: #1e3558;
+    --accent: #00c8aa;
+    --accent2: #ff6b35;
+    --text: #e8f4f0;
+    --text-dim: #7a9bb5;
+    --radius: 16px;
+    --green: #00e5a0;
+    --yellow: #ffd060;
+    --red: #ff5c7a;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+  body {
+    font-family: 'Sora', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    min-height: -webkit-fill-available;
+    overflow-x: hidden;
+  }
+
+  /* Background mesh */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background:
+      radial-gradient(ellipse 80% 60% at 10% 20%, rgba(0,200,170,0.08) 0%, transparent 60%),
+      radial-gradient(ellipse 60% 40% at 90% 80%, rgba(255,107,53,0.06) 0%, transparent 50%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .app {
+    position: relative;
+    z-index: 1;
+    max-width: 500px;
+    margin: 0 auto;
+    padding: 0 0 100px;
+  }
+
+  /* Header */
+  .header {
+    padding: 24px 20px 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .logo {
+    width: 40px; height: 40px;
+    background: linear-gradient(135deg, var(--accent), #0097ff);
+    border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px;
+    flex-shrink: 0;
+    box-shadow: 0 4px 16px rgba(0,200,170,0.3);
+  }
+  .header-text h1 {
+    font-size: 16px; font-weight: 700;
+    letter-spacing: -0.3px;
+  }
+  .header-text p {
+    font-size: 11px; color: var(--text-dim);
+    font-family: 'IBM Plex Mono', monospace;
+  }
+  .status-dot {
+    margin-left: auto;
+    display: flex; align-items: center; gap: 6px;
+    font-size: 11px; color: var(--text-dim);
+    font-family: 'IBM Plex Mono', monospace;
+  }
+  .dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--green);
+    box-shadow: 0 0 6px var(--green);
+    animation: pulse 2s infinite;
+  }
+  .dot.offline { background: var(--red); box-shadow: 0 0 6px var(--red); animation: none; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+  /* Language Selector */
+  .lang-panel {
+    margin: 0 16px 16px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+  }
+  .lang-row {
+    display: flex;
+    align-items: center;
+    padding: 12px 16px;
+    gap: 8px;
+  }
+  .lang-label {
+    font-size: 10px; color: var(--text-dim);
+    font-family: 'IBM Plex Mono', monospace;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    width: 28px;
+    flex-shrink: 0;
+  }
+  .lang-select {
+    flex: 1;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    color: var(--text);
+    padding: 8px 12px;
+    font-size: 14px;
+    font-family: 'Sora', sans-serif;
+    font-weight: 600;
+    -webkit-appearance: none;
+    cursor: pointer;
+    outline: none;
+  }
+  .lang-select:focus { border-color: var(--accent); }
+
+  .swap-btn {
+    width: 36px; height: 36px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 50%;
+    color: var(--accent);
+    font-size: 16px;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.2s;
+    flex-shrink: 0;
+  }
+  .swap-btn:active { transform: rotate(180deg) scale(0.9); background: var(--accent); color: #000; }
+
+  .lang-divider {
+    height: 1px; background: var(--border);
+  }
+
+  /* Input Area */
+  .input-panel {
+    margin: 0 16px 12px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+    transition: border-color 0.2s;
+  }
+  .input-panel:focus-within { border-color: var(--accent); }
+
+  .input-area {
+    width: 100%;
+    min-height: 110px;
+    padding: 16px;
+    background: transparent;
+    border: none;
+    color: var(--text);
+    font-size: 16px;
+    font-family: 'Sora', sans-serif;
+    resize: none;
+    outline: none;
+    line-height: 1.6;
+  }
+  .input-area::placeholder { color: var(--text-dim); }
+
+  .input-footer {
+    display: flex; align-items: center;
+    padding: 8px 12px;
+    border-top: 1px solid var(--border);
+    gap: 8px;
+  }
+  .char-count {
+    font-size: 11px; color: var(--text-dim);
+    font-family: 'IBM Plex Mono', monospace;
+    margin-left: auto;
+  }
+
+  .icon-btn {
+    width: 34px; height: 34px;
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    color: var(--text-dim);
+    font-size: 15px;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.2s;
+  }
+  .icon-btn:active { background: var(--surface2); color: var(--accent); transform: scale(0.93); }
+  .icon-btn.active { border-color: var(--accent); color: var(--accent); background: rgba(0,200,170,0.1); }
+
+  /* Translate Button */
+  .translate-btn {
+    display: block;
+    width: calc(100% - 32px);
+    margin: 0 16px 16px;
+    padding: 15px;
+    background: linear-gradient(135deg, var(--accent), #0097ff);
+    color: #000;
+    font-size: 15px;
+    font-weight: 700;
+    font-family: 'Sora', sans-serif;
+    border: none;
+    border-radius: var(--radius);
+    cursor: pointer;
+    letter-spacing: 0.3px;
+    transition: all 0.2s;
+    box-shadow: 0 4px 20px rgba(0,200,170,0.25);
+  }
+  .translate-btn:active { transform: scale(0.97); box-shadow: none; }
+  .translate-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+  .translate-btn.loading {
+    background: var(--surface2);
+    color: var(--text-dim);
+    box-shadow: none;
+  }
+
+  /* Result */
+  .result-panel {
+    margin: 0 16px 16px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+    display: none;
+  }
+  .result-panel.show { display: block; animation: slideUp 0.3s ease; }
+  @keyframes slideUp {
+    from { opacity: 0; transform: translateY(12px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .result-header {
+    display: flex; align-items: center;
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border);
+    gap: 8px;
+  }
+  .result-lang-badge {
+    font-size: 10px; font-weight: 700;
+    font-family: 'IBM Plex Mono', monospace;
+    background: rgba(0,200,170,0.15);
+    color: var(--accent);
+    padding: 3px 8px;
+    border-radius: 6px;
+    letter-spacing: 0.5px;
+  }
+  .result-source-badge {
+    font-size: 10px;
+    font-family: 'IBM Plex Mono', monospace;
+    color: var(--text-dim);
+    margin-left: auto;
+    background: var(--surface2);
+    padding: 3px 8px;
+    border-radius: 6px;
+  }
+  .result-source-badge.cached { color: var(--yellow); }
+  .result-source-badge.offline { color: var(--red); }
+
+  .result-text {
+    padding: 16px;
+    font-size: 18px;
+    line-height: 1.7;
+    color: var(--text);
+    min-height: 60px;
+  }
+  /* Special font handling for scripts */
+  .result-text.lao, .result-text.thai {
+    font-family: 'Noto Sans Lao', 'Noto Sans Thai', sans-serif;
+    font-size: 20px;
+  }
+  .result-text.bengali {
+    font-family: 'Noto Sans Bengali', sans-serif;
+    font-size: 20px;
+  }
+
+  .result-footer {
+    display: flex; gap: 8px;
+    padding: 8px 12px;
+    border-top: 1px solid var(--border);
+  }
+
+  /* History */
+  .section-title {
+    padding: 4px 20px 10px;
+    font-size: 11px; color: var(--text-dim);
+    font-family: 'IBM Plex Mono', monospace;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .clear-btn {
+    background: none; border: none;
+    color: var(--text-dim); font-size: 11px;
+    font-family: 'IBM Plex Mono', monospace;
+    cursor: pointer; padding: 2px 6px;
+    border-radius: 4px;
+  }
+  .clear-btn:hover { color: var(--red); }
+
+  .history-list {
+    padding: 0 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .history-item {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 12px 14px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .history-item:active { transform: scale(0.98); border-color: var(--accent); }
+  .history-meta {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 6px;
+  }
+  .history-langs {
+    font-size: 10px; font-family: 'IBM Plex Mono', monospace;
+    color: var(--accent); font-weight: 500;
+  }
+  .history-time {
+    font-size: 10px; color: var(--text-dim);
+    font-family: 'IBM Plex Mono', monospace;
+  }
+  .history-source {
+    font-size: 13px; color: var(--text-dim);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    margin-bottom: 2px;
+  }
+  .history-target {
+    font-size: 14px; color: var(--text);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+
+  /* Phrasebook */
+  .phrase-tabs {
+    display: flex; gap: 8px;
+    padding: 0 16px 12px;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .phrase-tabs::-webkit-scrollbar { display: none; }
+  .phrase-tab {
+    flex-shrink: 0;
+    padding: 6px 14px;
+    border-radius: 20px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text-dim);
+    font-size: 12px; font-family: 'Sora', sans-serif;
+    cursor: pointer; transition: all 0.2s;
+  }
+  .phrase-tab.active {
+    background: rgba(0,200,170,0.15);
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  .phrase-grid {
+    padding: 0 16px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+  .phrase-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .phrase-card:active { transform: scale(0.96); border-color: var(--accent); }
+  .phrase-en { font-size: 12px; color: var(--text-dim); margin-bottom: 4px; }
+  .phrase-target { font-size: 13px; color: var(--text); font-weight: 500; }
+
+  /* Bottom Nav */
+  .bottom-nav {
+    position: fixed; bottom: 0; left: 0; right: 0;
+    background: rgba(6,14,31,0.95);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-top: 1px solid var(--border);
+    display: flex;
+    z-index: 100;
+    max-width: 500px;
+    margin: 0 auto;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 100%;
+  }
+  .nav-item {
+    flex: 1;
+    display: flex; flex-direction: column; align-items: center;
+    padding: 10px 0 14px;
+    cursor: pointer; gap: 4px;
+    color: var(--text-dim);
+    transition: color 0.2s;
+    background: none; border: none;
+    font-family: 'Sora', sans-serif;
+  }
+  .nav-item.active { color: var(--accent); }
+  .nav-icon { font-size: 20px; }
+  .nav-label { font-size: 10px; letter-spacing: 0.5px; }
+
+  /* Tab Content */
+  .tab-content { display: none; }
+  .tab-content.active { display: block; }
+
+  /* Info panel */
+  .info-card {
+    margin: 0 16px 12px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px;
+  }
+  .info-card h3 {
+    font-size: 13px; margin-bottom: 10px; color: var(--accent);
+    font-family: 'IBM Plex Mono', monospace;
+  }
+  .info-row {
+    display: flex; justify-content: space-between;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 13px;
+  }
+  .info-row:last-child { border-bottom: none; }
+  .info-row span:last-child { color: var(--text-dim); }
+
+  /* Toast */
+  .toast {
+    position: fixed;
+    bottom: 90px;
+    left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    padding: 10px 18px;
+    border-radius: 20px;
+    font-size: 13px;
+    white-space: nowrap;
+    opacity: 0;
+    transition: all 0.3s;
+    z-index: 200;
+    pointer-events: none;
+  }
+  .toast.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+
+  .spinner {
+    display: inline-block;
+    width: 14px; height: 14px;
+    border: 2px solid rgba(255,255,255,0.2);
+    border-top-color: var(--text-dim);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    margin-right: 6px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .empty-state {
+    text-align: center;
+    padding: 32px 20px;
+    color: var(--text-dim);
+    font-size: 13px;
+  }
+  .empty-icon { font-size: 32px; margin-bottom: 8px; opacity: 0.4; }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- Header -->
+  <div class="header">
+    <div class="logo">🌿</div>
+    <div class="header-text">
+      <h1>XIN FU 翻譯</h1>
+      <p>xin-fu-translate v1.0</p>
+    </div>
+    <div class="status-dot">
+      <div class="dot" id="netDot"></div>
+      <span id="netLabel">online</span>
+    </div>
+  </div>
+
+  <!-- Translate Tab -->
+  <div class="tab-content active" id="tab-translate">
+
+    <!-- Language Selector -->
+    <div class="lang-panel">
+      <div class="lang-row">
+        <span class="lang-label">FROM</span>
+        <select class="lang-select" id="fromLang">
+          <option value="en">🇬🇧 English</option>
+          <option value="lo">🇱🇦 ລາວ (Lao)</option>
+          <option value="bn">🇧🇩 বাংলা (Bengali)</option>
+          <option value="id">🇮🇩 Indonesia</option>
+          <option value="th">🇹🇭 ไทย (Thai)</option>
+          <option value="zh-TW">🇹🇼 繁體中文</option>
+        </select>
+        <button class="swap-btn" onclick="swapLangs()" title="Swap">⇅</button>
+      </div>
+      <div class="lang-divider"></div>
+      <div class="lang-row">
+        <span class="lang-label">TO</span>
+        <select class="lang-select" id="toLang">
+          <option value="lo">🇱🇦 ລາວ (Lao)</option>
+          <option value="en">🇬🇧 English</option>
+          <option value="bn">🇧🇩 বাংলা (Bengali)</option>
+          <option value="id">🇮🇩 Indonesia</option>
+          <option value="th">🇹🇭 ไทย (Thai)</option>
+          <option value="zh-TW">🇹🇼 繁體中文</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Input -->
+    <div class="input-panel">
+      <textarea class="input-area" id="inputText"
+        placeholder="輸入要翻譯的文字..."
+        maxlength="500"
+        oninput="updateCharCount()"></textarea>
+      <div class="input-footer">
+        <button class="icon-btn" onclick="clearInput()" title="清除">✕</button>
+        <button class="icon-btn" id="speakSourceBtn" onclick="speakSource()" title="朗讀原文">🔊</button>
+        <button class="icon-btn" onclick="pasteText()" title="貼上">📋</button>
+        <span class="char-count"><span id="charCount">0</span>/500</span>
+      </div>
+    </div>
+
+    <button class="translate-btn" id="translateBtn" onclick="doTranslate()">
+      翻 譯
+    </button>
+
+    <!-- Result -->
+    <div class="result-panel" id="resultPanel">
+      <div class="result-header">
+        <span class="result-lang-badge" id="resultLangBadge">EN→LO</span>
+        <span class="result-source-badge" id="sourceLabel">MyMemory API</span>
+      </div>
+      <div class="result-text" id="resultText"></div>
+      <div class="result-footer">
+        <button class="icon-btn" id="speakResultBtn" onclick="speakResult()" title="朗讀譯文">🔊</button>
+        <button class="icon-btn" onclick="copyResult()" title="複製">📄</button>
+        <button class="icon-btn" onclick="saveToPhrasebook()" title="收藏">⭐</button>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- History Tab -->
+  <div class="tab-content" id="tab-history">
+    <div class="section-title">
+      翻譯記錄
+      <button class="clear-btn" onclick="clearHistory()">清除全部</button>
+    </div>
+    <div class="history-list" id="historyList"></div>
+  </div>
+
+  <!-- Phrasebook Tab -->
+  <div class="tab-content" id="tab-phrases">
+    <div class="section-title">常用短語</div>
+    <div class="phrase-tabs" id="phraseTabs"></div>
+    <div class="phrase-grid" id="phraseGrid"></div>
+  </div>
+
+  <!-- Settings Tab -->
+  <div class="tab-content" id="tab-settings">
+    <div class="info-card">
+      <h3>// API 翻譯引擎</h3>
+      <div class="info-row"><span>主引擎</span><span>MyMemory (免費)</span></div>
+      <div class="info-row"><span>備用</span><span>LibreTranslate</span></div>
+      <div class="info-row"><span>離線快取</span><span>localStorage</span></div>
+      <div class="info-row"><span>快取筆數</span><span id="cacheCount">0</span></div>
+    </div>
+    <div class="info-card">
+      <h3>// 發音支援</h3>
+      <div class="info-row"><span>English</span><span id="tts-en">偵測中...</span></div>
+      <div class="info-row"><span>ລາວ (Lao)</span><span id="tts-lo">偵測中...</span></div>
+      <div class="info-row"><span>বাংলা</span><span id="tts-bn">偵測中...</span></div>
+      <div class="info-row"><span>Indonesia</span><span id="tts-id">偵測中...</span></div>
+      <div class="info-row"><span>ไทย</span><span id="tts-th">偵測中...</span></div>
+    </div>
+    <div class="info-card">
+      <h3>// 關於</h3>
+      <div class="info-row"><span>版本</span><span>v1.0.0</span></div>
+      <div class="info-row"><span>農場</span><span>XIN FU FRESH</span></div>
+      <div class="info-row"><span>支援語言</span><span>6 種</span></div>
+    </div>
+  </div>
+
+</div><!-- /app -->
+
+<!-- Bottom Nav -->
+<nav class="bottom-nav">
+  <button class="nav-item active" onclick="switchTab('translate', this)">
+    <span class="nav-icon">🌐</span>
+    <span class="nav-label">翻譯</span>
+  </button>
+  <button class="nav-item" onclick="switchTab('history', this)">
+    <span class="nav-icon">📋</span>
+    <span class="nav-label">記錄</span>
+  </button>
+  <button class="nav-item" onclick="switchTab('phrases', this)">
+    <span class="nav-icon">⭐</span>
+    <span class="nav-label">短語</span>
+  </button>
+  <button class="nav-item" onclick="switchTab('settings', this)">
+    <span class="nav-icon">⚙️</span>
+    <span class="nav-label">設定</span>
+  </button>
+</nav>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ── Constants ──────────────────────────────────────────────
+const LANG_NAMES = {
+  en: 'English', lo: 'ລາວ', bn: 'বাংলা', id: 'Indonesia', th: 'ไทย', 'zh-TW': '中文'
+};
+const LANG_TTS = {
+  en: 'en-US', lo: 'lo-LA', bn: 'bn-BD', id: 'id-ID', th: 'th-TH', 'zh-TW': 'zh-TW'
+};
+
+// ── State ──────────────────────────────────────────────────
+let history = JSON.parse(localStorage.getItem('xf_history') || '[]');
+let cache   = JSON.parse(localStorage.getItem('xf_cache')   || '{}');
+let phrases = JSON.parse(localStorage.getItem('xf_phrases') || '[]');
+let activePhraseTab = 0;
+let lastResult = '';
+
+// ── Network Status ─────────────────────────────────────────
+function updateNetStatus() {
+  const online = navigator.onLine;
+  document.getElementById('netDot').className = 'dot' + (online ? '' : ' offline');
+  document.getElementById('netLabel').textContent = online ? 'online' : 'offline';
+}
+window.addEventListener('online', updateNetStatus);
+window.addEventListener('offline', updateNetStatus);
+updateNetStatus();
+
+// ── Tab Switching ──────────────────────────────────────────
+function switchTab(tab, btn) {
+  document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+  document.getElementById('tab-' + tab).classList.add('active');
+  btn.classList.add('active');
+  if (tab === 'history') renderHistory();
+  if (tab === 'phrases') renderPhrases();
+  if (tab === 'settings') updateSettings();
+}
+
+// ── Char Count ─────────────────────────────────────────────
+function updateCharCount() {
+  const v = document.getElementById('inputText').value;
+  document.getElementById('charCount').textContent = v.length;
+}
+
+function clearInput() {
+  document.getElementById('inputText').value = '';
+  updateCharCount();
+}
+
+async function pasteText() {
+  try {
+    const t = await navigator.clipboard.readText();
+    document.getElementById('inputText').value = t;
+    updateCharCount();
+  } catch { showToast('請手動貼上文字'); }
+}
+
+// ── Translation ────────────────────────────────────────────
+function getCacheKey(text, from, to) {
+  return `${from}|${to}|${text.trim().toLowerCase()}`;
+}
+
+async function translateMyMemory(text, from, to) {
+  // MyMemory free API: 1000 requests/day, no key needed
+  const langPair = `${from}|${to}`;
+  const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=${langPair}`;
+  const res = await fetch(url);
+  const data = await res.json();
+  if (data.responseStatus === 200) {
+    return { text: data.responseData.translatedText, source: 'MyMemory' };
+  }
+  throw new Error('MyMemory failed');
+}
+
+async function doTranslate() {
+  const text = document.getElementById('inputText').value.trim();
+  if (!text) { showToast('請輸入文字'); return; }
+
+  const from = document.getElementById('fromLang').value;
+  const to   = document.getElementById('toLang').value;
+  if (from === to) { showToast('來源與目標語言相同'); return; }
+
+  const btn = document.getElementById('translateBtn');
+  btn.disabled = true;
+  btn.className = 'translate-btn loading';
+  btn.innerHTML = '<span class="spinner"></span>翻譯中...';
+
+  const cacheKey = getCacheKey(text, from, to);
+
+  // Check cache first
+  if (cache[cacheKey]) {
+    showResult(cache[cacheKey], from, to, 'cached');
+    resetBtn();
+    addHistory(text, cache[cacheKey], from, to);
+    return;
+  }
+
+  if (!navigator.onLine) {
+    showToast('📡 離線中，未找到快取');
+    resetBtn();
+    return;
+  }
+
+  try {
+    const result = await translateMyMemory(text, from, to);
+    const translated = result.text;
+
+    // Cache it
+    cache[cacheKey] = translated;
+    localStorage.setItem('xf_cache', JSON.stringify(cache));
+
+    showResult(translated, from, to, result.source);
+    addHistory(text, translated, from, to);
+  } catch(e) {
+    showToast('翻譯失敗，請稍後再試');
+    console.error(e);
+  }
+
+  resetBtn();
+}
+
+function resetBtn() {
+  const btn = document.getElementById('translateBtn');
+  btn.disabled = false;
+  btn.className = 'translate-btn';
+  btn.innerHTML = '翻 譯';
+}
+
+function showResult(text, from, to, source) {
+  lastResult = text;
+  const panel = document.getElementById('resultPanel');
+  const rt = document.getElementById('resultText');
+  const badge = document.getElementById('resultLangBadge');
+  const srcLabel = document.getElementById('sourceLabel');
+
+  badge.textContent = `${from.toUpperCase()}→${to.toUpperCase()}`;
+
+  // Script-aware class
+  rt.className = 'result-text';
+  if (to === 'lo') rt.classList.add('lao');
+  else if (to === 'th') rt.classList.add('thai');
+  else if (to === 'bn') rt.classList.add('bengali');
+
+  rt.textContent = text;
+
+  if (source === 'cached') {
+    srcLabel.textContent = '📦 快取';
+    srcLabel.className = 'result-source-badge cached';
+  } else {
+    srcLabel.textContent = '🌐 ' + source;
+    srcLabel.className = 'result-source-badge';
+  }
+
+  panel.classList.add('show');
+  panel.style.display = 'block';
+}
+
+// ── Swap ───────────────────────────────────────────────────
+function swapLangs() {
+  const f = document.getElementById('fromLang');
+  const t = document.getElementById('toLang');
+  const tmp = f.value;
+  f.value = t.value;
+  t.value = tmp;
+  const inputEl = document.getElementById('inputText');
+  if (lastResult) {
+    inputEl.value = lastResult;
+    updateCharCount();
+    lastResult = '';
+    document.getElementById('resultPanel').style.display = 'none';
+  }
+}
+
+// ── TTS ────────────────────────────────────────────────────
+function speak(text, langCode) {
+  if (!('speechSynthesis' in window)) { showToast('此裝置不支援語音'); return; }
+  window.speechSynthesis.cancel();
+  const utter = new SpeechSynthesisUtterance(text);
+  utter.lang = LANG_TTS[langCode] || langCode;
+  utter.rate = 0.85;
+  window.speechSynthesis.speak(utter);
+}
+
+function speakSource() {
+  const text = document.getElementById('inputText').value.trim();
+  const from = document.getElementById('fromLang').value;
+  if (!text) { showToast('請先輸入文字'); return; }
+  speak(text, from);
+}
+
+function speakResult() {
+  if (!lastResult) { showToast('沒有譯文'); return; }
+  const to = document.getElementById('toLang').value;
+  speak(lastResult, to);
+}
+
+// ── History ────────────────────────────────────────────────
+function addHistory(source, target, from, to) {
+  history.unshift({
+    source, target, from, to,
+    time: Date.now()
+  });
+  if (history.length > 50) history.pop();
+  localStorage.setItem('xf_history', JSON.stringify(history));
+}
+
+function renderHistory() {
+  const list = document.getElementById('historyList');
+  if (!history.length) {
+    list.innerHTML = '<div class="empty-state"><div class="empty-icon">📋</div>尚無翻譯記錄</div>';
+    return;
+  }
+  list.innerHTML = history.map((h, i) => `
+    <div class="history-item" onclick="loadHistory(${i})">
+      <div class="history-meta">
+        <span class="history-langs">${h.from.toUpperCase()} → ${h.to.toUpperCase()}</span>
+        <span class="history-time">${timeAgo(h.time)}</span>
+      </div>
+      <div class="history-source">${escHtml(h.source)}</div>
+      <div class="history-target">${escHtml(h.target)}</div>
+    </div>
+  `).join('');
+}
+
+function loadHistory(i) {
+  const h = history[i];
+  document.getElementById('fromLang').value = h.from;
+  document.getElementById('toLang').value = h.to;
+  document.getElementById('inputText').value = h.source;
+  updateCharCount();
+  showResult(h.target, h.from, h.to, 'cached');
+  switchTab('translate', document.querySelectorAll('.nav-item')[0]);
+}
+
+function clearHistory() {
+  if (!confirm('確定清除所有記錄？')) return;
+  history = [];
+  localStorage.removeItem('xf_history');
+  renderHistory();
+  showToast('記錄已清除');
+}
+
+// ── Phrasebook ─────────────────────────────────────────────
+const DEFAULT_PHRASES = [
+  { category: '問候', items: [
+    { en: 'Good morning', lo: 'ສະບາຍດີຕອນເຊົ້າ', th: 'อรุณสวัสดิ์', bn: 'শুভ সকাল', id: 'Selamat pagi' },
+    { en: 'How are you?', lo: 'ເຈົ້າສະບາຍດີບໍ?', th: 'สบายดีไหม?', bn: 'আপনি কেমন আছেন?', id: 'Apa kabar?' },
+    { en: 'Thank you', lo: 'ຂອບໃຈ', th: 'ขอบคุณ', bn: 'ধন্যবাদ', id: 'Terima kasih' },
+    { en: 'Sorry / Excuse me', lo: 'ຂໍໂທດ', th: 'ขอโทษ', bn: 'মাফ করবেন', id: 'Maaf' },
+  ]},
+  { category: '農場', items: [
+    { en: 'Start work', lo: 'ເລີ່ມວຽກ', th: 'เริ่มงาน', bn: 'কাজ শুরু করুন', id: 'Mulai kerja' },
+    { en: 'Break time', lo: 'ເວລາພັກ', th: 'เวลาพัก', bn: 'বিরতির সময়', id: 'Waktu istirahat' },
+    { en: 'Harvest today', lo: 'ເກັບກ່ຽວມື້ນີ້', th: 'เก็บเกี่ยววันนี้', bn: 'আজ ফসল', id: 'Panen hari ini' },
+    { en: 'Water the plants', lo: 'ຮົດນໍ້າຕົ້ນໄມ້', th: 'รดน้ำต้นไม้', bn: 'গাছে পানি দিন', id: 'Siram tanaman' },
+  ]},
+  { category: '緊急', items: [
+    { en: 'Call for help', lo: 'ຮ້ອງຂໍຄວາມຊ່ວຍເຫລືອ', th: 'ขอความช่วยเหลือ', bn: 'সাহায্য ডাকুন', id: 'Panggil bantuan' },
+    { en: 'I am sick', lo: 'ຂ້ອຍບໍ່ສະບາຍ', th: 'ฉันป่วย', bn: 'আমি অসুস্থ', id: 'Saya sakit' },
+    { en: 'Stop immediately', lo: 'ຢຸດທັນທີ', th: 'หยุดทันที', bn: 'এখনই থামুন', id: 'Berhenti segera' },
+  ]},
+];
+
+function renderPhrases() {
+  const toLang = document.getElementById('toLang').value;
+  const allPhrases = [...DEFAULT_PHRASES];
+
+  // Add saved phrases as a category
+  if (phrases.length) {
+    allPhrases.push({ category: '⭐ 收藏', items: phrases.map(p => ({ en: p.source, [p.to]: p.target })) });
+  }
+
+  const tabs = document.getElementById('phraseTabs');
+  tabs.innerHTML = allPhrases.map((cat, i) =>
+    `<button class="phrase-tab ${i === activePhraseTab ? 'active' : ''}" onclick="selectPhraseTab(${i})">${cat.category}</button>`
+  ).join('');
+
+  const grid = document.getElementById('phraseGrid');
+  const cat = allPhrases[activePhraseTab];
+  if (!cat) { grid.innerHTML = ''; return; }
+
+  const targetKey = ['en','lo','bn','id','th','zh-TW'].includes(toLang) ? toLang : 'lo';
+
+  grid.innerHTML = cat.items.map((item, i) => {
+    const targetText = item[targetKey] || item.lo || Object.values(item)[1] || '';
+    return `
+      <div class="phrase-card" onclick="usePhraseItem('${escAttr(item.en)}', '${escAttr(targetText)}', '${escAttr(targetKey)}')">
+        <div class="phrase-en">${escHtml(item.en)}</div>
+        <div class="phrase-target">${escHtml(targetText)}</div>
+      </div>
+    `;
+  }).join('');
+}
+
+function selectPhraseTab(i) {
+  activePhraseTab = i;
+  renderPhrases();
+}
+
+function usePhraseItem(en, target, toLang) {
+  document.getElementById('fromLang').value = 'en';
+  document.getElementById('toLang').value = toLang || document.getElementById('toLang').value;
+  document.getElementById('inputText').value = en;
+  updateCharCount();
+  showResult(target, 'en', toLang, 'cached');
+  switchTab('translate', document.querySelectorAll('.nav-item')[0]);
+  speak(target, toLang);
+}
+
+function saveToPhrasebook() {
+  const source = document.getElementById('inputText').value.trim();
+  if (!source || !lastResult) { showToast('沒有可收藏的內容'); return; }
+  const to = document.getElementById('toLang').value;
+  const from = document.getElementById('fromLang').value;
+  phrases.unshift({ source, target: lastResult, from, to });
+  if (phrases.length > 30) phrases.pop();
+  localStorage.setItem('xf_phrases', JSON.stringify(phrases));
+  showToast('已加入常用短語 ⭐');
+}
+
+// ── Settings ───────────────────────────────────────────────
+function updateSettings() {
+  document.getElementById('cacheCount').textContent = Object.keys(cache).length;
+
+  // Check TTS support
+  if ('speechSynthesis' in window) {
+    setTimeout(() => {
+      const voices = window.speechSynthesis.getVoices();
+      const langs = { en: 'tts-en', lo: 'tts-lo', bn: 'tts-bn', id: 'tts-id', th: 'tts-th' };
+      Object.entries(langs).forEach(([lang, elId]) => {
+        const ttsLang = LANG_TTS[lang];
+        const found = voices.some(v => v.lang.startsWith(ttsLang.split('-')[0]));
+        const el = document.getElementById(elId);
+        if (el) el.textContent = found ? '✅ 支援' : '⚠️ 有限支援';
+      });
+    }, 500);
+  } else {
+    ['tts-en','tts-lo','tts-bn','tts-id','tts-th'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.textContent = '❌ 不支援';
+    });
+  }
+}
+
+// ── Helpers ────────────────────────────────────────────────
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+function copyResult() {
+  if (!lastResult) return;
+  navigator.clipboard.writeText(lastResult).then(() => showToast('已複製 ✓')).catch(() => showToast('複製失敗'));
+}
+
+function timeAgo(ts) {
+  const diff = Date.now() - ts;
+  if (diff < 60000) return '剛剛';
+  if (diff < 3600000) return Math.floor(diff/60000) + '分前';
+  if (diff < 86400000) return Math.floor(diff/3600000) + '時前';
+  return Math.floor(diff/86400000) + '天前';
+}
+
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+function escAttr(s) {
+  return String(s).replace(/'/g,"\\'").replace(/"/g,'&quot;');
+}
+
+// Init
+if ('speechSynthesis' in window) {
+  window.speechSynthesis.getVoices();
+}
+updateCharCount();
+</script>
+</body>
+</html>
